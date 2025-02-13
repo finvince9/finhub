@@ -1,0 +1,353 @@
+local a = library:NewWindow("NBT","HUB") 
+local d = a:NewSection("Credit")
+local b = a:NewSection("Main")
+local c = a:NewSection("Auto")
+
+d:Button("Copy Link YouTube", function()
+    setclipboard("http://youtube.com/@NiceBBSBNBT?sub_confirmation=1")
+    for i, newText in ipairs(newTexts) do
+        textLabels[i]:Refresh(newText)
+    end
+    task.wait(3)
+    for i, originalText in ipairs(originalTexts) do
+        textLabels[i]:Refresh(originalText)
+    end
+end)
+d:Button("Copy Link Discord", function()
+setclipboard("https://discord.gg/6D6yg4qZMz")
+    for i, newText in ipairs(newTexts) do
+        textLabels[i]:Refresh(newText)
+    end
+    task.wait(3)
+    for i, originalText in ipairs(originalTexts) do
+        textLabels[i]:Refresh(originalText)
+    end
+end)
+
+b:Button("NoCooldowm Prompt",function() 
+local function promptnocooldown()
+   game:GetService("ProximityPromptService").PromptButtonHoldBegan:Connect(
+   function(promptssr)
+       promptssr.HoldDuration = 0
+   end)
+end
+
+promptnocooldown()
+end)
+
+b:h1("One Hit [âŒ]")
+
+b:h1("Dead Aura [âŒ]")
+
+b:h1("Teleport Dun")
+b:Button("Reset Game",function()
+    local JoinTable1 = {
+        ["Location"] = "Frosty Hills",
+        ["GroupType"] = "Public",
+        ["Difficult"] = "Hard",
+        ["Invasions"] = true
+    }
+    game:GetService("ReplicatedStorage").Events.CreateDungeonGroup:FireServer(JoinTable1)
+    game:GetService("ReplicatedStorage").Events.StartDungeonGroup:FireServer()
+end)
+b:Button("Return Lobby [No Chest]",function()
+        local cloneref = cloneref or function(o) return o end
+    TeleportService = cloneref(game:GetService("TeleportService"))
+    local TeleportService = TeleportService
+    TeleportService:Teleport(112315720097464)
+end)
+
+c:h1("Auto Join")
+c:Toggle("Auto Join", function(a)
+    autojoindungeon = a
+    while autojoindungeon do
+        task.wait()
+        pcall(function()
+            local JoinTable1 = {
+                ["Location"] = "Frosty Hills",
+                ["GroupType"] = "Public",
+                ["Difficult"] = "Hard",
+                ["Invasions"] = true
+            }
+            game:GetService("ReplicatedStorage").Events.CreateDungeonGroup:FireServer(JoinTable1)
+            task.wait(1)
+            game:GetService("ReplicatedStorage").Events.StartDungeonGroup:FireServer()
+        end)
+    end
+end)
+
+c:h1("Auto Attack")
+c:Toggle("Auto Attack", function(state)
+    autoattack = state
+    while autoattack do task.wait()
+        pcall(function()
+            game:GetService("ReplicatedStorage").Events.Combat:FireServer("Attack")
+        end)
+    end
+end)
+c:Toggle("Auto Skill", function(a)
+    autoskill = a
+    while autoskill do task.wait()
+        pcall(function()
+            local VirtualInputManager = game:GetService("VirtualInputManager")
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.One, false, game)
+            task.wait(0.1)
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Two, false, game)
+            task.wait(0.1)
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Three, false, game)
+        end)
+    end
+end)
+c:Toggle("Auto Block", function(a)
+    autoblock = a
+    while autoblock do task.wait()
+        pcall(function()
+            game:GetService("ReplicatedStorage").Events.Blocking:InvokeServer("Blocking")
+            game:GetService("ReplicatedStorage").UIEvents.BlockingToggle:Fire(true)
+        end)
+    end
+    if autoblock == false then
+        game:GetService("ReplicatedStorage").Events.Blocking:InvokeServer("UnBlocking")
+        game:GetService("ReplicatedStorage").UIEvents.BlockingToggle:Fire(false)
+    end
+end)
+
+local guiservice = game:GetService("GuiService")
+local virtualInputManager = game:GetService("VirtualInputManager")
+local gui = game:GetService("CoreGui")
+local function toggleAutoFarmButton()
+    local screenGui = gui:FindFirstChild("ScreenGui")
+    if screenGui then
+        local autofarmButton = screenGui:FindFirstChild("AutoFarmButton")
+        if autofarmButton then
+            autofarmButton.Visible = not autofarmButton.Visible
+        end
+    end
+end
+
+local guiservice = game:GetService("GuiService")
+local virtualInputManager = game:GetService("VirtualInputManager")
+local gui = game:GetService("CoreGui")
+local function toggleAutoFarmButton()
+    local screenGui = gui:FindFirstChild("ScreenGui")
+    if screenGui then
+        local mainWindow = screenGui:FindFirstChild("MainWindow")
+        if mainWindow then
+            local pages = mainWindow:FindFirstChild("Pages")
+            if pages then
+                local auto = pages:FindFirstChild("Auto")
+                if auto then
+                    local newToggle = auto:FindFirstChild("NewToggle")
+                    if newToggle and newToggle:IsA("TextButton") and newToggle.Visible and newToggle.Text == "Auto Farm" then
+                        task.wait(0.001)
+                        guiservice.SelectedCoreObject = newToggle
+                        virtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+                        virtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+                    end
+                end
+            end
+        end
+    end
+end
+ 
+local setPercentHP = 50
+c:h1("Health")
+c:Slider("Set Percent HP", 1, 100, function(o)
+    setPercentHP = o / 100
+end)
+ 
+c:Toggle("Auto Health", function(a)
+    autoHeath = a
+    local originalPosition = nil
+    local savedCampfireCFrame = nil
+ 
+    while autoHeath do
+        task.wait()
+        pcall(function()
+            local player = game.Players.LocalPlayer
+            local character = player.Character
+            if character and character:FindFirstChild("Humanoid") and character:FindFirstChild("HumanoidRootPart") then
+                local humanoid = character.Humanoid
+                local maxHealth = humanoid.MaxHealth
+                local currentHealth = humanoid.Health
+                local humanoidRootPart = character.HumanoidRootPart
+                local campfire = workspace:FindFirstChild("Tower")
+                if campfire and campfire:FindFirstChild("StartRoom") then
+                    local startRoom = campfire.StartRoom
+                    if startRoom:FindFirstChild("Campfire") and startRoom.Campfire:FindFirstChild("Hitbox") then
+                        local campfireHitbox = startRoom.Campfire.Hitbox
+                        if not savedCampfireCFrame then
+                            savedCampfireCFrame = CFrame.new(104, 37, -211)
+                        end
+                        if currentHealth / maxHealth < setPercentHP then
+                            if not originalPosition then
+                                originalPosition = humanoidRootPart.CFrame
+                            end
+                            for i=1,10 do
+                                humanoidRootPart.CFrame = CFrame.new(116, 37, -212)
+                                task.wait(.2)
+                                humanoidRootPart.CFrame = savedCampfireCFrame
+                            end
+                            if autofarm then
+                                autofarm = false
+                                toggleAutoFarmButton()
+                            end
+                        end
+                        if currentHealth >= maxHealth and originalPosition then
+                            humanoidRootPart.CFrame = originalPosition
+                            originalPosition = nil
+                            if not autofarm then
+                                autofarm = true
+                                toggleAutoFarmButton()
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+end)
+ 
+local distanceautofarmx = 0
+local distanceautofarmy = 50
+local distanceautofarmz = 0
+c:h1("Auto Farm")
+c:Slider("Distance X", -50, 50, function(o)
+    distanceautofarmx = o
+end)
+c:Slider("Distance Y", -50, 50, function(o)
+    distanceautofarmy = o
+end)
+c:Slider("Distance Z", -50, 50, function(o)
+    distanceautofarmz = o
+end)
+c:Toggle("Auto Farm", function(a)
+    autofarm = a
+    targetMonster = nil
+    if autofarm == true then
+        local BuildPart = Instance.new("Part", game.Workspace)
+        BuildPart.Size = Vector3.new(1, 0, 1)
+        BuildPart.Anchored = true
+        BuildPart.CanCollide = false
+        BuildPart.CFrame = game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame
+        BuildPart.Transparency = 1
+        while autofarm do
+            task.wait()
+            pcall(function()
+                local player = game:GetService("Players").LocalPlayer
+                for _, v in pairs(game:GetService("Workspace").Characters:GetChildren()) do
+                    if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") then
+                        if not game:GetService("Players"):FindFirstChild(v.Name) then
+                            local humanoid = v:FindFirstChild("Humanoid")
+                            if humanoid and humanoid.Health > 0 then
+                                targetMonster = v
+                                repeat
+                                    game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
+                                    task.wait()
+                                    player.Character.HumanoidRootPart.CFrame = CFrame.new(
+                                        v.HumanoidRootPart.Position + Vector3.new(distanceautofarmx or 0, distanceautofarmy or 0, distanceautofarmz or 0),
+                                        v.HumanoidRootPart.Position
+                                    )
+                                until humanoid.Health <= 0 or not autofarm
+                            end
+                        end
+                    end
+                end
+                if autofarm == false then 
+                    task.wait()
+                    game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
+                    game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame = BuildPart.CFrame
+                    BuildPart:Destroy()
+                end
+            end)
+        end
+    end
+end)
+ 
+local autoChestEnabled = false
+local autoEXPBookEnabled = false
+local searchRange = 500
+c:h1("Auto Grab")
+ 
+local player = game:GetService("Players").LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+local workspace = game:GetService("Workspace")
+ 
+c:Toggle("Auto Chest", function(state)
+    autoChestEnabled = state
+    if not autoChestEnabled then return end
+    task.spawn(function()
+        while autoChestEnabled do
+            local tower = workspace:FindFirstChild("Tower")
+            if tower then
+                local closestChest = nil
+                local closestDistance = math.huge
+                for i = 1, 20 do
+                    local wave = tower:FindFirstChild(tostring(i))
+                    if wave and wave:IsA("Model") then
+                        local chest = wave:FindFirstChild("Chest")
+                        if chest and chest:IsA("Model") then
+                            local distance = (hrp.Position - chest:GetPivot().Position).Magnitude
+ 
+                            if distance < searchRange and distance < closestDistance then
+                                if not chest:FindFirstChild("ForceField") and chest:FindFirstChild("ProximityPrompt") then
+                                    closestChest = chest
+                                    closestDistance = distance
+                                end
+                            end
+                        end
+                    end
+                end
+                if closestChest then
+                    hrp.CFrame = closestChest:GetPivot() + Vector3.new(0, 3, 0)
+                    task.wait(0.5)
+                    local proximityPrompt = closestChest:FindFirstChild("ProximityPrompt")
+                    if proximityPrompt then
+                        fireproximityprompt(proximityPrompt)
+                    end
+                end
+            end
+            task.wait(1)
+        end
+    end)
+end)
+ 
+c:Toggle("Auto EXPBook", function(state)
+    autoEXPBookEnabled = state
+    if not autoEXPBookEnabled then return end
+    task.spawn(function()
+        while autoEXPBookEnabled do
+            local tower = workspace:FindFirstChild("Tower")
+            if tower then
+                local closestEXPBook = nil
+                local closestDistance = math.huge
+                for i = 1, 20 do
+                    local wave = tower:FindFirstChild(tostring(i))
+                    if wave and wave:IsA("Model") then
+                        local expBook = wave:FindFirstChild("EXPBook")
+                        if expBook and expBook:IsA("Model") then
+                            local distance = (hrp.Position - expBook:GetPivot().Position).Magnitude
+                            if distance < searchRange and distance < closestDistance then
+                                local proximityPrompt = expBook:FindFirstChild("ProximityPrompt")
+                                if proximityPrompt and proximityPrompt.Enabled then
+                                    closestEXPBook = expBook
+                                    closestDistance = distance
+                                end
+                            end
+                        end
+                    end
+                end
+                if closestEXPBook then
+                    hrp.CFrame = closestEXPBook:GetPivot() + Vector3.new(0, 3, 0)
+                    task.wait(0.5)
+                    local proximityPrompt = closestEXPBook:FindFirstChild("ProximityPrompt")
+                    if proximityPrompt and proximityPrompt.Enabled then
+                        fireproximityprompt(proximityPrompt)
+                    end
+                end
+            end
+            task.wait(1)
+        end
+    end)
+end)
