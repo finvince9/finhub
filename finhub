@@ -25,15 +25,13 @@ setclipboard("https://discord.gg/6D6yg4qZMz")
     end
 end)
 
-b:Button("NoCooldowm Prompt",function() 
-local function promptnocooldown()
-   game:GetService("ProximityPromptService").PromptButtonHoldBegan:Connect(
-   function(promptssr)
-       promptssr.HoldDuration = 0
-   end)
-end
-
-promptnocooldown()
+b:Button("NoCooldowm Prompt", function() 
+    local function promptnocooldown()
+        game:GetService("ProximityPromptService").PromptButtonHoldBegan:Connect(function(prompt)
+            prompt.HoldDuration = 0
+        end)
+    end
+    promptnocooldown()
 end)
 
 b:h1("One Hit [âŒ]")
@@ -78,17 +76,21 @@ c:Toggle("Auto Join", function(a)
 end)
 
 c:h1("Auto Attack")
+
 c:Toggle("Auto Attack", function(state)
     autoattack = state
-    while autoattack do task.wait()
+    while autoattack do 
+        task.wait()
         pcall(function()
             game:GetService("ReplicatedStorage").Events.Combat:FireServer("Attack")
         end)
     end
 end)
-c:Toggle("Auto Skill", function(a)
-    autoskill = a
-    while autoskill do task.wait()
+
+c:Toggle("Auto Skill", function(state)
+    autoskill = state
+    while autoskill do 
+        task.wait()
         pcall(function()
             local VirtualInputManager = game:GetService("VirtualInputManager")
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.One, false, game)
@@ -99,15 +101,18 @@ c:Toggle("Auto Skill", function(a)
         end)
     end
 end)
-c:Toggle("Auto Block", function(a)
-    autoblock = a
-    while autoblock do task.wait()
+
+c:Toggle("Auto Block", function(state)
+    autoblock = state
+    while autoblock do 
+        task.wait()
         pcall(function()
             game:GetService("ReplicatedStorage").Events.Blocking:InvokeServer("Blocking")
             game:GetService("ReplicatedStorage").UIEvents.BlockingToggle:Fire(true)
         end)
     end
-    if autoblock == false then
+    
+    if not autoblock then
         game:GetService("ReplicatedStorage").Events.Blocking:InvokeServer("UnBlocking")
         game:GetService("ReplicatedStorage").UIEvents.BlockingToggle:Fire(false)
     end
@@ -151,119 +156,222 @@ local function toggleAutoFarmButton()
     end
 end
  
-local setPercentHP = 50
+local TweenService = game:GetService("TweenService")
+
+local HealthManager = {
+    percentageThreshold = 0.50,
+    isEnabled = false,
+    originalPosition = nil,
+    campfirePosition = CFrame.new(104, 37, -211),
+    healingPosition = CFrame.new(116, 37, -212),
+    healingAttempts = 10,
+    healingDelay = 0.2,
+    tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear)
+}
+
+local c = c 
 c:h1("Health")
-c:Slider("Set Percent HP", 1, 100, function(o)
-    setPercentHP = o / 100
+
+c:Slider("Set Percent HP", 1, 100, function(value)
+    HealthManager.percentageThreshold = value / 100
 end)
- 
-c:Toggle("Auto Health", function(a)
-    autoHeath = a
-    local originalPosition = nil
-    local savedCampfireCFrame = nil
- 
-    while autoHeath do
-        task.wait()
-        pcall(function()
-            local player = game.Players.LocalPlayer
-            local character = player.Character
-            if character and character:FindFirstChild("Humanoid") and character:FindFirstChild("HumanoidRootPart") then
-                local humanoid = character.Humanoid
-                local maxHealth = humanoid.MaxHealth
-                local currentHealth = humanoid.Health
-                local humanoidRootPart = character.HumanoidRootPart
+
+local function shouldHeal(humanoid)
+    return (humanoid.Health / humanoid.MaxHealth) < HealthManager.percentageThreshold
+end
+
+local function isFullHealth(humanoid)
+    return humanoid.Health >= humanoid.MaxHealth
+end
+
+local function tweenToPosition(rootPart, targetCFrame)
+    local tween = TweenService:Create(rootPart, HealthManager.tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+local function performHealing(rootPart)
+    for i = 1, HealthManager.healingAttempts do
+        tweenToPosition(rootPart, HealthManager.healingPosition)
+        task.wait(HealthManager.healingDelay)
+        tweenToPosition(rootPart, HealthManager.campfirePosition)
+    end
+end
+
+c:Toggle("Auto Health", function(enabled)
+    HealthManager.isEnabled = enabled
+    
+    task.spawn(function()
+        while HealthManager.isEnabled do
+            task.wait()
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                local character = player.Character
+                if not character then return end
+                
+                local humanoid = character:FindFirstChild("Humanoid")
+                local rootPart = character:FindFirstChild("HumanoidRootPart")
+                if not (humanoid and rootPart) then return end
+                
                 local campfire = workspace:FindFirstChild("Tower")
-                if campfire and campfire:FindFirstChild("StartRoom") then
-                    local startRoom = campfire.StartRoom
-                    if startRoom:FindFirstChild("Campfire") and startRoom.Campfire:FindFirstChild("Hitbox") then
-                        local campfireHitbox = startRoom.Campfire.Hitbox
-                        if not savedCampfireCFrame then
-                            savedCampfireCFrame = CFrame.new(104, 37, -211)
+                if not (campfire and 
+                       campfire:FindFirstChild("StartRoom") and 
+                       campfire.StartRoom:FindFirstChild("Campfire") and 
+                       campfire.StartRoom.Campfire:FindFirstChild("Hitbox")) then
+                    return
+                end
+                
+                if shouldHeal(humanoid) then
+                    HealthManager.originalPosition = HealthManager.originalPosition or rootPart.CFrame
+                    performHealing(rootPart)
+                elseif isFullHealth(humanoid) and HealthManager.originalPosition then
+                    tweenToPosition(rootPart, HealthManager.originalPosition)
+                    HealthManager.originalPosition = nil
+                end
+            end)
+        end
+    end)
+end)
+
+_G.AutoJumpEnabled = true
+
+c:Toggle("Auto Jump", function(enabled)
+    _G.AutoJumpEnabled = enabled
+    
+    if enabled then
+        spawn(function()
+            while _G.AutoJumpEnabled do
+                _G.AntiSitConnection = game:GetService("RunService").Heartbeat:Connect(function()
+                    local character = game.Players.LocalPlayer.Character
+                    if character and character:FindFirstChild("Humanoid") then
+                        if character.Humanoid.Sit then
+                            character.Humanoid.Sit = false
                         end
-                        if currentHealth / maxHealth < setPercentHP then
-                            if not originalPosition then
-                                originalPosition = humanoidRootPart.CFrame
-                            end
-                            for i=1,10 do
-                                humanoidRootPart.CFrame = CFrame.new(116, 37, -212)
-                                task.wait(.2)
-                                humanoidRootPart.CFrame = savedCampfireCFrame
-                            end
-                            if autofarm then
-                                autofarm = false
-                                toggleAutoFarmButton()
-                            end
-                        end
-                        if currentHealth >= maxHealth and originalPosition then
-                            humanoidRootPart.CFrame = originalPosition
-                            originalPosition = nil
-                            if not autofarm then
-                                autofarm = true
-                                toggleAutoFarmButton()
+                    end
+                end)
+                
+                wait(5)
+                
+                if _G.AntiSitConnection then
+                    _G.AntiSitConnection:Disconnect()
+                    _G.AntiSitConnection = nil
+                end
+                
+                wait(5)
+            end
+        end)
+    else
+        if _G.AntiSitConnection then
+            _G.AntiSitConnection:Disconnect()
+            _G.AntiSitConnection = nil
+        end
+    end
+end)
+
+spawn(function()
+    wait(1)
+    if c and c.Toggle then
+        c:Toggle("Auto Jump", true)
+    end
+end)
+
+local AutoFarm = {
+    distance = {x = 0, y = 25, z = 0},
+    enabled = false,
+    targetMonster = nil,
+    buildPart = nil,
+    pausedForHealing = false
+}
+
+local c = c
+c:h1("Auto Farm")
+
+c:Slider("Distance X", -50, 50, function(value)
+    AutoFarm.distance.x = value
+end)
+
+c:Slider("Distance Y", -50, 50, function(value)
+    AutoFarm.distance.y = value
+end)
+
+c:Slider("Distance Z", -50, 50, function(value)
+    AutoFarm.distance.z = value
+end)
+
+local function createBuildPart()
+    local part = Instance.new("Part")
+    part.Size = Vector3.new(1, 0, 1)
+    part.Anchored = true
+    part.CanCollide = false
+    part.Transparency = 1
+    part.Parent = game.Workspace
+    local player = game:GetService("Players").LocalPlayer
+    part.CFrame = player.Character.HumanoidRootPart.CFrame
+    return part
+end
+
+local function handleMonster(monster)
+    if AutoFarm.pausedForHealing then return false end
+    
+    local humanoid = monster:FindFirstChild("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return false end
+    
+    local player = game:GetService("Players").LocalPlayer
+    local rootPart = player.Character.HumanoidRootPart
+    rootPart.Anchored = false
+    rootPart.CFrame = CFrame.new(
+        monster.HumanoidRootPart.Position + Vector3.new(
+            AutoFarm.distance.x,
+            AutoFarm.distance.y,
+            AutoFarm.distance.z
+        ),
+        monster.HumanoidRootPart.Position
+    )
+    return humanoid.Health > 0
+end
+
+c:Toggle("Auto Farm", function(enabled)
+    AutoFarm.enabled = enabled
+    AutoFarm.targetMonster = nil
+    
+    if enabled then
+        AutoFarm.buildPart = createBuildPart()
+        task.spawn(function()
+            while AutoFarm.enabled do
+                task.wait()
+                pcall(function()
+                    for _, monster in pairs(game:GetService("Workspace").Characters:GetChildren()) do
+                        if not AutoFarm.enabled then break end
+                        if monster:IsA("Model") 
+                            and monster:FindFirstChild("HumanoidRootPart") 
+                            and monster:FindFirstChild("Humanoid")
+                            and not game:GetService("Players"):FindFirstChild(monster.Name) then
+                            AutoFarm.targetMonster = monster
+                            while handleMonster(monster) and AutoFarm.enabled do
+                                task.wait()
                             end
                         end
                     end
-                end
+                end)
+            end
+            if AutoFarm.buildPart then
+                local player = game:GetService("Players").LocalPlayer
+                player.Character.HumanoidRootPart.Anchored = false
+                player.Character.HumanoidRootPart.CFrame = AutoFarm.buildPart.CFrame
+                AutoFarm.buildPart:Destroy()
+                AutoFarm.buildPart = nil
             end
         end)
     end
 end)
- 
-local distanceautofarmx = 0
-local distanceautofarmy = 50
-local distanceautofarmz = 0
-c:h1("Auto Farm")
-c:Slider("Distance X", -50, 50, function(o)
-    distanceautofarmx = o
-end)
-c:Slider("Distance Y", -50, 50, function(o)
-    distanceautofarmy = o
-end)
-c:Slider("Distance Z", -50, 50, function(o)
-    distanceautofarmz = o
-end)
-c:Toggle("Auto Farm", function(a)
-    autofarm = a
-    targetMonster = nil
-    if autofarm == true then
-        local BuildPart = Instance.new("Part", game.Workspace)
-        BuildPart.Size = Vector3.new(1, 0, 1)
-        BuildPart.Anchored = true
-        BuildPart.CanCollide = false
-        BuildPart.CFrame = game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame
-        BuildPart.Transparency = 1
-        while autofarm do
-            task.wait()
-            pcall(function()
-                local player = game:GetService("Players").LocalPlayer
-                for _, v in pairs(game:GetService("Workspace").Characters:GetChildren()) do
-                    if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") then
-                        if not game:GetService("Players"):FindFirstChild(v.Name) then
-                            local humanoid = v:FindFirstChild("Humanoid")
-                            if humanoid and humanoid.Health > 0 then
-                                targetMonster = v
-                                repeat
-                                    game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
-                                    task.wait()
-                                    player.Character.HumanoidRootPart.CFrame = CFrame.new(
-                                        v.HumanoidRootPart.Position + Vector3.new(distanceautofarmx or 0, distanceautofarmy or 0, distanceautofarmz or 0),
-                                        v.HumanoidRootPart.Position
-                                    )
-                                until humanoid.Health <= 0 or not autofarm
-                            end
-                        end
-                    end
-                end
-                if autofarm == false then 
-                    task.wait()
-                    game.Players.LocalPlayer.Character.HumanoidRootPart.Anchored = false
-                    game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame = BuildPart.CFrame
-                    BuildPart:Destroy()
-                end
-            end)
-        end
-    end
-end)
+
+_G.pauseAutoFarm = function()
+    AutoFarm.pausedForHealing = true
+end
+
+_G.resumeAutoFarm = function()
+    AutoFarm.pausedForHealing = false
+end
  
 local autoChestEnabled = false
 local autoEXPBookEnabled = false
